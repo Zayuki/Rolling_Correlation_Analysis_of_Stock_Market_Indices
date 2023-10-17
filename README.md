@@ -1,4 +1,4 @@
-# Rolling Correlation Analysis of Stock Market Indices
+# Rolling Correlation Analysis of Stock Market Indices Using Apache Hive and Apache PySpark
 
 ## Introduction
 

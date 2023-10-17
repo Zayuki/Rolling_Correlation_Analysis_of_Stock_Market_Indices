@@ -1,4 +1,4 @@
-![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/e459793d-e4f5-4729-911c-89970c4fa4c4)![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/0dcb20f0-4c12-4482-aeae-2e4359ca6ffd)# Rolling Correlation Analysis of Stock Market Indices
+# Rolling Correlation Analysis of Stock Market Indices
 
 ## Introduction
 

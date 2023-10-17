@@ -1,4 +1,4 @@
-# Rolling Correlation Analysis of Stock Market Indices
+![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/e459793d-e4f5-4729-911c-89970c4fa4c4)![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/0dcb20f0-4c12-4482-aeae-2e4359ca6ffd)# Rolling Correlation Analysis of Stock Market Indices
 
 ## Introduction
 
@@ -151,4 +151,71 @@ ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
 SELECT Index, YearMonth, Close
 FROM indexdata_month;
+```
+
+### Procedure for Rolling Correlation Analysis with PySpark
+
+| Step | Description |
+|------|-------------|
+| 1    | Import the queried result from the data access stage above (CSV) into PySpark. |
+| 2    | For ease of analysis, spread rows into different index columns using the "pivot" function. Convert "Year-Month," "Index," and "AvgClose" columns into "Year-Month," "Index0," "Index1," "Index2," ..., "Index13." |
+| 3    | Compute pairwise 24-month rolling correlation coefficients for each pair of stock market indices. This involves a total of 91 pairs from 14 stock market indices. |
+| 4    | Export all pairwise rolling correlation coefficients into separate CSV files for further analysis and visualization. |
+
+- Step 1: Load Python Libraries in Apache PySpark.
+```Python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+import pandas as pd
+import numpy as np
+```
+Import the queried result from Apache Hive (csv) into PySpark
+```Python
+spark = SparkSession.builder.getorCreate()
+Dataschema1= StructType([StructField("Index", StringType(), True),
+StructField("YearMonth", StringType(), True),
+StructField("AvgClose", FloatType(), True)])
+
+df = spark.read.format("csv").option("header","false").schema(Dataschema1)
+load("/home/lxy/Downloads/hive_monthly/000000_0")
+
+df.show(5)
+```
+
+- Step 2: For ease of analysis, spread rows into different index columns using the "pivot" function. Convert "Year-Month," "Index," and "AvgClose" columns into "Year-Month," "Index0," "Index1," "Index2," ..., "Index13."
+```Python
+pivotdf = df.groupBy("YearMonth").pivot("Index").sum("AvgClose")
+pivotdf.show(5)
+```
+
+- Step 4: Compute pairwise 24-month rolling correlation coefficients for each pair of stock market indices (altogether 91 pairs from 14 stock market indices)
+``` Python
+listcolumn = ["'000001.SS'","'399001.SZ'","GDAXI", "GSPTE", "HSI", "IXIC", "'J203.JO'", "KS11", "N100", "N225", "NSEI", "NYA", "SSMI", "TWII"]
+
+listcolumnpandas = ["000001.SS","399001.SZ","GDAXI", "GSPTE", "HSI", "IXIC", "'J203.JO'", "KS11", "N100", "N225", "NSEI", "NYA", "SSMI", "TWII"]
+
+#Construct user-defined function “extracttwoindices” to perform the analysis:
+
+def extracttwoindices(indexnumber1, indexnumber2):
+    index1 = listcolumn[indexnumber1]
+    index2 = listcolumn[indexnumber2]
+    index1pandas = listcolumnpandas[indexnumber1]
+    index2pandas = listcolumnpandas[indexnumber2]
+    dffinal = pivotdf.select("YearMonth", index1, index2).filter(col(index1).isNotNull() & col(index2).isNotNull()).sort("YearMonth")
+    dffinalpandas = dffinal.toPandas()
+    dffinalpandas['RollingCor12m'] = dffinalpandas[index1pandas].rolling(12).corr(dffinalpandas[index2pandas])
+    dffinalpandas['RollingCor24m'] = dffinalpandas[index1pandas].rolling(24).corr(dffinalpandas[index2pandas])
+    dffinalpandas['RollingCor36m'] = dffinalpandas[index1pandas].rolling(36).corr(dffinalpandas[index2pandas])
+    dffinal1 = spark.createDataFrame(dffinalpandas)
+    path = "/home/lxy/Downloads/hive_month/" + str(indexnumber1) + "_" +str(indexnumber2) + ".csv"
+    dffinal1.write.option("header","true").csv(path)
+    return 'done'
+
+# Use “for” loop and “extracttwoindices” function to compute 91 pairs of
+rolling correlation coefficients:
+
+for x in range(0,14):
+    for y in range(x+1,14):
+            extracttwoindices(x,y)
 ```

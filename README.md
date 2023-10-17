@@ -26,7 +26,7 @@ Limited past studies on stock market indices using big data tools
 - To perform rolling correlation analysis between stock market indices using big data tools (Apache Hive and Apache PySpark).
 
 ## Work FLow
-
+An ETL pipeline will be created using Apache Hive, then the output result will be transferred to Apache PySpark for Rolling Coefficient Analysis.
 ![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/0dbdb895-4272-4726-a002-2e082105bb18)
 
 ### Data Acquisition

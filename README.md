@@ -39,3 +39,116 @@ An ETL pipeline will be created using Apache Hive, then the output result will b
 | Filename  | indexData.csv |
 | Number of rows  | 112,457 rows |
 | Number of columns  | 8 columns |
+
+
+### ETL Process using Apache Hive
+| Step | Description |
+|------|-------------|
+| Data Storage | |
+| 1    | Save raw dataset (`indexData.csv`) into HDFS. |
+| 2    | Load raw dataset into a data processing tool. |
+| Data Cleaning | |
+| 3    | Count rows before deletion. |
+| 4    | Delete rows with missing values. |
+| 5    | Count rows after deletion. |
+| 6    | Delete "Adj Close" and "Volume" columns. |
+| Data Pre-Processing | |
+| 7    | Add "Year," "Month," and "Day" columns based on the "Date" column. |
+| 8    | Add a "Year-Month" column. |
+| Data Transformation for Monthly Data | |
+| 9    | For all "Index" names, average all the indices ("Open," "High," "Low," "Close") by "Year-Month." |
+| 10   | Query the average monthly "Close" column. |
+| 11   | Export the queried result as a CSV file. |
+
+- Data Storage
+1) Create external table and table in Apache Hive:
+External table:
+```SQL
+CREATE EXTERNAL TABLE IF NOT EXISTS indexdata_csv(
+Index STRING,
+Date2 DATE,
+Open FLOAT,
+High FLOAT,
+Low FLOAT,
+Close FLOAT,
+Adj_Close FLOAT,
+Volumne BIGINT)
+ROW FORMAT DELIMITTED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/hdfs/apachehive'
+TBLPROPERTIES ('skip.header.line.count'='1');
+```
+Internal table:
+```SQL
+CREATE EXTERNAL TABLE indexdata (
+Index STRING,
+Date2 DATE,
+Open FLOAT,
+High FLOAT,
+Low FLOAT,
+Close FLOAT,
+Adj_Close FLOAT,
+Volumne BIGINT)
+COMMENT 'Stock market indices'
+ROW FORMAT DELIMITTED
+FIELDS TERMINATED BY ','
+STORED AS orc
+TBLPROPERTIES ('transactional'='true);
+```
+2) Save raw dataset (`indexData.csv`) into HDFS.
+```SQL
+INSERT INTO TABLE indexdata SELECT * FROM indexdata_csv;
+```
+
+- Data Cleaning
+3) Count rows before deletion
+```SQL
+SELECT coutn(*) FROM indexdata;
+```
+4) Delete rows with missing values
+```SQL
+DELETE FROM indexdata WHERE open is NULL;
+```
+5) Count rows after deletion
+```SQL
+SELECT coutn(*) FROM indexdata;
+```
+6) Delete “Adj Close” and “Volume” columns
+```SQL
+CREATE TABLE indexdata_tmp AS SELECT Index, Date2, Open, High, Low, Close
+FROM indexdata;
+```
+
+- Data Preprocessing
+7) Add “Year”, “Month”, “Day” columns based on “Date” column
+```SQL
+CREATE TABLE indexdata_tmp1 AS SELECT *, Year(Date2) as Year, LPAD(MONTH(DATE2),2,0) As Month, DAY(Date2) as Day
+FROM indexdata_tmp;
+```
+8) Add “Year-Month” column
+```SQL
+CREATE TABLE indexdata_final AS SELECT *, CONCAT(YEAR,'-',MONTH) as YearMonth FROM indexdata_tmp1;
+```
+9) For all “Index” names, average all the indices (“Open”, “High”, “Low”, “Close”) by “Year-Month”
+```SQL
+CREATE TABLE indexdata_month AS
+SELECT Index, YearMonth, AVG(Open) AS Open, AVG(High) AS High, AVG(Low) AS Low, AVG(Close) as Close
+FROM indexdata_final
+GROUP BY Index, YearMonth;
+```
+- Data Transformation for Monthly Data
+10) Query average monthly "Close" column.
+```SQL
+SELECT Index, YearMonth, Close
+FROM indexdata_month LIMIT 10;
+```
+11) Export Queried results as CSV file and import to PySpark for analysis.
+```SQL
+INSERT OVERWRITE LOCAL DIRECTORY
+'file:///home/lxy/Downloads/hive_monthly'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+SELECT Index, YearMonth, Close
+FROM indexdata_month;
+```

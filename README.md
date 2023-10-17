@@ -42,7 +42,7 @@ An ETL pipeline will be created using Apache Hive, then the output result will b
 
 
 ### ETL Process using Apache Hive
-![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/0facee6a-692c-4d3b-8a9d-8fa026d1284f)
+![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/b763c713-5945-4187-9134-c1bacec7f2b0)
 
 | Step | Description |
 |------|-------------|
@@ -156,7 +156,7 @@ FROM indexdata_month;
 ```
 
 ### Procedure for Rolling Correlation Analysis with PySpark
-![image](https://media.licdn.com/dms/image/C4E12AQEb6oxAxtYD-Q/article-cover_image-shrink_600_2000/0/1620420835464?e=2147483647&v=beta&t=qbt9g5HjMukXzDqXW6Y9QonzSkSbVqVm58OWnxcLhlg)
+![image](https://github.com/Zayuki/Rolling_Correlation_Analysis_of_Stock_Market_Indices/assets/67309677/0c022af2-651c-43e9-abdf-edd08ceeeef9)
 
 | Step | Description |
 |------|-------------|

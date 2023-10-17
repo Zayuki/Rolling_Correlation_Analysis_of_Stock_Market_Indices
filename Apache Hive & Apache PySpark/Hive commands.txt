@@ -1,0 +1,101 @@
+hdfs dfs -mkdir /user/hdfs/wqd7007gphive
+hdfs dfs -put file:///home/lvh/Downloads/indexData.csv /user/hdfs/wqd7007gphive
+
+USE WQD7007;
+
+Create temporary external table
+-------------------------------
+CREATE EXTERNAL TABLE IF NOT EXISTS indexdata_csv (
+Index STRING,
+Date2 DATE,
+Open FLOAT,
+High FLOAT,
+Low FLOAT,
+Close FLOAT,
+Adj_Close FLOAT,
+Volume BIGINT) 
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/hdfs/wqd7007gphive'
+TBLPROPERTIES ('skip.header.line.count'='1');
+
+SELECT * FROM indexdata_csv LIMIT 10;
+
+Create ORC table from the temporary csv table
+---------------------------------------------
+SET hive.txn.manager=org.apache.hadoop.hive.ql.lockmgr.DbTxnManager;
+SET hive.support.concurrency=true;
+SET hive.exec.dynamic.partition.mode=nonstrict;
+SET hive.compactor.initiator.on=true;
+SET hive.compactor.worker.threads=1;
+
+CREATE TABLE indexdata (
+Index STRING,
+Date2 DATE,
+Open FLOAT,
+High FLOAT,
+Low FLOAT,
+Close FLOAT,
+Adj_Close FLOAT,
+Volume BIGINT) 
+COMMENT 'Stock market indices' 
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+STORED AS orc 
+TBLPROPERTIES ('transactional'='true');
+
+INSERT INTO TABLE indexdata SELECT * FROM indexdata_csv;
+
+SELECT * from indexdata LIMIT 10;
+
+DROP TABLE indexdata_csv;
+
+SELECT count(*) FROM indexdata;
+
+DELETE FROM indexdata WHERE open IS NULL;
+
+SELECT count(*) FROM indexdata;
+
+CREATE TABLE indexdata_tmp AS
+SELECT Index, Date2, Open, High, Low, Close from indexdata;
+
+CREATE TABLE indexdata_tmp1 AS 
+SELECT *, YEAR(Date2) AS Year, LPAD(MONTH(Date2),2,0) AS Month, DAY(Date2) AS Day 
+FROM indexdata_tmp;
+
+#CREATE TABLE indexdata_final AS 
+#SELECT *, CONCAT(Year,'-',Month) as YearMonth
+#FROM indexdata_tmp1;
+
+#SELECT Index, Date2, High FROM indexdata_final
+#WHERE YEAR >= 2017 AND Year <= 2021
+#AND Index in ('NSEI', 'TWII');
+
+#INSERT OVERWRITE LOCAL DIRECTORY
+#'file:///home/lvh/Downloads/hive_daily'
+#ROW FORMAT DELIMITED
+#FIELDS TERMINATED BY ','
+#SELECT Index, Date2, High FROM indexdata_final
+#WHERE YEAR >= 2017 AND Year <= 2021
+#AND Index in ('NSEI', 'TWII');
+
+CREATE TABLE indexdata_month AS 
+SELECT Index, YearMonth, AVG(Open) AS Open,
+AVG(High) AS High, AVG(Low) AS Low, AVG(Close) AS Close
+FROM indexdata_final
+GROUP BY Index, YearMonth;
+
+SELECT Index, YearMonth, Close 
+FROM indexdata_month LIMIT 10;
+#WHERE YearMonth >= '2012-01' AND YearMonth <= '2021-12' AND
+#Index in ('399001.SZ', 'NSEI', 'TWII');
+
+INSERT OVERWRITE LOCAL DIRECTORY
+'file:///home/lvh/Downloads/hive_monthly'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+SELECT Index, YearMonth, Close 
+FROM indexdata_month;
+#WHERE YearMonth >= '2012-01' AND YearMonth <= '2021-12' AND
+#Index in ('399001.SZ', 'NSEI', 'TWII');
